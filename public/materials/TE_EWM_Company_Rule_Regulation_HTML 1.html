@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-Waste Compliance Dashboard</title>
+  <!-- Google Fonts are generally permitted in iframes, but fallback to sans-serif if blocked -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* Self-Contained CSS to bypass MS Teams sandbox restrictions */
+    :root {
+      --bg: #020617; --surface: #0f172a; --surface-alt: #1e293b;
+      --border: #334155; --text-main: #f8fafc; --text-muted: #94a3b8; 
+      --eco: #4ade80; --eco-dim: rgba(34, 197, 94, 0.15); --eco-border: rgba(34, 197, 94, 0.4);
+      --amber: #fbbf24; --amber-dim: rgba(251, 191, 36, 0.15);
+      --cyan: #22d3ee; --cyan-dim: rgba(34, 211, 238, 0.15);
+      --orange: #fb923c; --orange-dim: rgba(251, 146, 60, 0.15);
+      --font-sans: 'Plus Jakarta Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background-color: var(--bg); color: var(--text-main); font-family: var(--font-sans); line-height: 1.5; font-size: 14px; -webkit-font-smoothing: antialiased; }
+    .text-mono { font-family: var(--font-mono); }
+    .text-eco { color: var(--eco); } .text-amber { color: var(--amber); } .text-cyan { color: var(--cyan); } .text-muted { color: var(--text-muted); }
+    
+    .container { max-width: 1280px; margin: 0 auto; padding: 24px; }
+    header { background: rgba(15, 23, 42, 0.95); border-bottom: 1px solid var(--surface-alt); padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    
+    .flex-row { display: flex; align-items: center; gap: 12px; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+    
+    .badge { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; background: var(--eco-dim); color: var(--eco); border: 1px solid var(--eco-border); text-transform: uppercase; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 6px; }
+    .icon { width: 18px; height: 18px; display: inline-block; vertical-align: middle; }
+    
+    /* Hero Section */
+    .hero { background: linear-gradient(135deg, var(--surface), #022c22); border: 1px solid var(--surface-alt); border-radius: 24px; padding: 32px; display: grid; grid-template-columns: 1.5fr 1fr; gap: 32px; margin-bottom: 40px; }
+    .hero h2 { font-size: 28px; margin: 16px 0 12px; font-weight: 800; line-height: 1.2; }
+    .hero p { color: var(--text-muted); margin-bottom: 24px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .stat-box { background: rgba(30, 41, 59, 0.5); border: 1px solid var(--surface-alt); border-radius: 12px; padding: 16px; text-align: center; }
+    .stat-box .val { font-size: 22px; font-weight: 800; margin: 4px 0; }
+    
+    /* Framework Ledger */
+    .ledger { background: rgba(2, 6, 23, 0.6); border: 1px solid var(--surface-alt); border-radius: 16px; padding: 24px; }
+    .ledger-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface); border: 1px solid var(--surface-alt); border-radius: 10px; margin-top: 12px; }
+    .metal-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; font-family: var(--font-mono); margin-right: 12px; }
+    
+    /* Audit Cards */
+    .section-title { font-size: 24px; font-weight: 800; margin-bottom: 24px; border-bottom: 1px solid var(--surface-alt); padding-bottom: 16px; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px; margin-bottom: 40px; }
+    .card { background: var(--surface); border: 1px solid var(--surface-alt); border-radius: 20px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; }
+    .card h3 { font-size: 18px; margin: 8px 0 4px; }
+    .card-meta { background: rgba(2, 6, 23, 0.5); border: 1px solid var(--surface-alt); border-radius: 12px; padding: 16px; font-size: 12px; margin: 16px 0; display: flex; flex-direction: column; gap: 8px; }
+    .card-meta > div { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; }
+    .card-meta > div:last-child { border: none; padding: 0; }
+    .initiative { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; font-size: 12px; color: var(--text-muted); }
+    
+    /* Calculator Section */
+    .calc-section { background: var(--surface); border: 1px solid var(--surface-alt); border-radius: 24px; padding: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 40px; }
+    .input-group { margin-bottom: 16px; }
+    label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; font-weight: 700; }
+    input, select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text-main); padding: 12px; border-radius: 10px; font-family: var(--font-sans); font-size: 14px; }
+    input:focus, select:focus { outline: none; border-color: var(--eco); }
+    .result-card { background: var(--bg); border: 1px solid var(--surface-alt); border-radius: 16px; padding: 24px; }
+    .progress-bar { width: 100%; height: 10px; background: var(--surface); border-radius: 10px; margin: 12px 0; overflow: hidden; border: 1px solid var(--surface-alt); }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--eco), var(--cyan)); border-radius: 10px; transition: width 0.3s; }
+    
+    /* Table */
+    .table-container { overflow-x: auto; background: var(--surface); border: 1px solid var(--surface-alt); border-radius: 16px; margin-bottom: 40px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+    th { padding: 16px; background: var(--bg); color: var(--text-muted); font-size: 11px; text-transform: uppercase; border-bottom: 1px solid var(--surface-alt); }
+    td { padding: 16px; border-bottom: 1px solid var(--surface-alt); }
+    tr:last-child td { border: none; }
+    
+    @media (max-width: 900px) {
+      .hero, .calc-section { grid-template-columns: 1fr; }
+      .stat-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- HEADER -->
+  <header>
+    <div class="flex-row">
+      <div style="background: var(--eco); padding: 8px; border-radius: 8px; color: #000;">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+      </div>
+      <div>
+        <div class="badge" style="margin-bottom: 4px;">CPCB Statutory Audit • EPA 1986</div>
+        <h1 style="font-size: 18px; font-weight: 800;">E-Waste & RoHS Regulatory Dashboard</h1>
+      </div>
+    </div>
+    <div style="background: var(--surface); border: 1px solid var(--surface-alt); padding: 8px 16px; border-radius: 12px; display: flex; gap: 12px; align-items: center;">
+      <div style="width: 32px; height: 32px; background: var(--eco-dim); border: 1px solid var(--eco-border); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--eco); font-weight: bold; font-size: 12px;">TP</div>
+      <div>
+        <p style="font-size: 13px; font-weight: 700;">Tejas Pawar</p>
+        <p style="font-size: 11px; color: var(--text-muted);" class="text-mono">Roll: <span class="text-eco">24102B0033</span> • CMPN-B</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    
+    <!-- HERO SECTION -->
+    <section class="hero">
+      <div>
+        <div class="badge">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>
+          E-Waste Rules, 2022 Framework
+        </div>
+        <h2>Indian ESDM Sector & Extended Producer Responsibility</h2>
+        <p>Under notification <strong>G.S.R. 534(E)</strong> effective April 1, 2023, the CPCB mandates strict traceability across 106 EEE equipment codes. Producers must satisfy metal-based recycling quotas and comply with sub-rule 16(1) RoHS thresholds.</p>
+        
+        <div class="stat-grid">
+          <div class="stat-box">
+            <div style="font-size: 10px; color: var(--text-muted);" class="text-mono">FY 23-25 EPR</div>
+            <div class="val text-eco">60%</div>
+            <div style="font-size: 10px; color: var(--text-muted);">of generation</div>
+          </div>
+          <div class="stat-box">
+            <div style="font-size: 10px; color: var(--text-muted);" class="text-mono">FY 25-27 EPR</div>
+            <div class="val text-amber">70%</div>
+            <div style="font-size: 10px; color: var(--text-muted);">of generation</div>
+          </div>
+          <div class="stat-box">
+            <div style="font-size: 10px; color: var(--text-muted);" class="text-mono">FY 27-28+ EPR</div>
+            <div class="val text-cyan">80%</div>
+            <div style="font-size: 10px; color: var(--text-muted);">mandate</div>
+          </div>
+          <div class="stat-box">
+            <div style="font-size: 10px; color: var(--text-muted);" class="text-mono">RoHS Pb Limit</div>
+            <div class="val text-eco">&le; 0.1%</div>
+            <div style="font-size: 10px; color: var(--text-muted);">homogeneous</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ledger">
+        <div class="flex-between" style="border-bottom: 1px solid var(--surface-alt); padding-bottom: 12px;">
+          <h3 style="font-size: 12px; text-transform: uppercase; color: var(--text-muted); display: flex; align-items: center; gap: 8px;">
+            <svg class="icon text-eco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 12 12 17 22 12"/><polyline points="2 17 12 22 22 17"/></svg>
+            CPCB 4-Metal Credit Ledger
+          </h3>
+          <span class="badge" style="background: var(--surface-alt); color: var(--eco); border: none;">Sched-III</span>
+        </div>
+        
+        <div class="ledger-item">
+          <div class="flex-row">
+            <div class="metal-icon" style="background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber);">Au</div>
+            <div>
+              <p style="font-weight: 700; font-size: 13px;">Gold Credits</p>
+              <p style="font-size: 10px; color: var(--text-muted);">PCB edges, IC wires</p>
+            </div>
+          </div>
+          <div class="text-mono text-amber" style="font-size: 11px;">20% cap</div>
+        </div>
+
+        <div class="ledger-item">
+          <div class="flex-row">
+            <div class="metal-icon" style="background: var(--orange-dim); color: var(--orange); border: 1px solid var(--orange);">Cu</div>
+            <div>
+              <p style="font-weight: 700; font-size: 13px;">Copper Credits</p>
+              <p style="font-size: 10px; color: var(--text-muted);">Coils, traces</p>
+            </div>
+          </div>
+          <div class="text-mono text-orange" style="font-size: 11px;">1:1 Offset</div>
+        </div>
+
+        <div class="ledger-item">
+          <div class="flex-row">
+            <div class="metal-icon" style="background: var(--cyan-dim); color: var(--cyan); border: 1px solid var(--cyan);">Al</div>
+            <div>
+              <p style="font-weight: 700; font-size: 13px;">Aluminium</p>
+              <p style="font-size: 10px; color: var(--text-muted);">Heatsinks, frames</p>
+            </div>
+          </div>
+          <div class="text-mono text-cyan" style="font-size: 11px;">1:1 Offset</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ENTERPRISE AUDIT CARDS -->
+    <div class="flex-between" style="margin-bottom: 24px; border-bottom: 1px solid var(--surface-alt); padding-bottom: 16px;">
+      <div>
+        <div class="badge" style="margin-bottom: 8px;">Deep-Dive Audits</div>
+        <h2 style="font-size: 24px; font-weight: 800;">5 Premier Indian Enterprises (FY25-26)</h2>
+      </div>
+    </div>
+
+    <div class="card-grid">
+      <!-- Dixon -->
+      <div class="card">
+        <div>
+          <div class="flex-between">
+            <div class="badge text-mono">Tier 5 (>5,000 MT)</div>
+            <div class="badge" style="background: rgba(34, 197, 94, 0.1); border: none;"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg> Compliant</div>
+          </div>
+          <h3>Dixon Technologies (India) Ltd.</h3>
+          <p style="font-size: 12px; color: var(--text-muted);">HQ: Noida | Est. 1993</p>
+          
+          <div class="card-meta">
+            <div><span class="text-muted">CPCB Role:</span> <strong class="text-mono">Producer</strong></div>
+            <div><span class="text-muted">Waste Handled:</span> <strong class="text-mono text-amber">6,850 MT</strong></div>
+            <div><span class="text-muted">Target (70%):</span> <strong class="text-mono text-eco">4,795 MT</strong></div>
+            <div><span class="text-muted">Statutory Fee:</span> <strong class="text-mono">₹15,00,000</strong></div>
+          </div>
+
+          <div class="initiative">
+            <svg class="icon text-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span><strong>RoHS Validation:</strong> EN 50581 compliant self-declarations for ITEW15 & CEEW1.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tata -->
+      <div class="card">
+        <div>
+          <div class="flex-between">
+            <div class="badge text-mono">Tier 5 (>5,000 MT)</div>
+            <div class="badge" style="background: rgba(34, 197, 94, 0.1); border: none;"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg> Compliant</div>
+          </div>
+          <h3>Tata Electronics Pvt. Ltd.</h3>
+          <p style="font-size: 12px; color: var(--text-muted);">HQ: Hosur | Est. 2020</p>
+          
+          <div class="card-meta">
+            <div><span class="text-muted">CPCB Role:</span> <strong class="text-mono">Manufacturer</strong></div>
+            <div><span class="text-muted">Waste Handled:</span> <strong class="text-mono text-amber">8,400 MT</strong></div>
+            <div><span class="text-muted">Target (70%):</span> <strong class="text-mono text-eco">5,880 MT</strong></div>
+            <div><span class="text-muted">Statutory Fee:</span> <strong class="text-mono">₹15,00,000</strong></div>
+          </div>
+
+          <div class="initiative">
+            <svg class="icon text-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M7 15.328c-2.19.467-3.69 1.545-3.69 2.672 0 1.933 3.88 3.5 8.69 3.5 4.81 0 8.69-1.567 8.69-3.5 0-1.127-1.5-2.205-3.69-2.672"/><path d="m9 2-3 3 3 3"/><path d="M6 5h2.176c2.513 0 4.673 1.632 5.342 3.829l2.457 8.041"/><path d="m22 10-3-3-3 3"/><path d="M19 7h-2.176c-2.513 0-4.673 1.632-5.342 3.829l-2.457 8.041"/></svg>
+            <span><strong>Zero Waste:</strong> Platinum UL 2799 rated facilities; closed-loop Aluminium recovery.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kaynes -->
+      <div class="card">
+        <div>
+          <div class="flex-between">
+            <div class="badge text-mono">Tier 4 (1K-5K MT)</div>
+            <div class="badge" style="background: rgba(34, 197, 94, 0.1); border: none;"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg> Compliant</div>
+          </div>
+          <h3>Kaynes Technology India</h3>
+          <p style="font-size: 12px; color: var(--text-muted);">HQ: Mysuru | Est. 1988</p>
+          
+          <div class="card-meta">
+            <div><span class="text-muted">CPCB Role:</span> <strong class="text-mono">Refurbisher</strong></div>
+            <div><span class="text-muted">Waste Handled:</span> <strong class="text-mono text-amber">2,400 MT</strong></div>
+            <div><span class="text-muted">Target (70%):</span> <strong class="text-mono text-eco">1,680 MT</strong></div>
+            <div><span class="text-muted">Statutory Fee:</span> <strong class="text-mono">₹10,00,000</strong></div>
+          </div>
+
+          <div class="initiative">
+            <svg class="icon text-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+            <span><strong>Compliance:</strong> IPC-A-610 Class 3 & sub-rule 16(1) exemptions for defense PCBAs.</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Syrma -->
+      <div class="card">
+        <div>
+          <div class="flex-between">
+            <div class="badge text-mono">Tier 4 (1K-5K MT)</div>
+            <div class="badge" style="background: rgba(34, 197, 94, 0.1); border: none;"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg> Compliant</div>
+          </div>
+          <h3>Syrma SGS Technology</h3>
+          <p style="font-size: 12px; color: var(--text-muted);">HQ: Chennai | Est. 1978</p>
+          
+          <div class="card-meta">
+            <div><span class="text-muted">CPCB Role:</span> <strong class="text-mono">Producer</strong></div>
+            <div><span class="text-muted">Waste Handled:</span> <strong class="text-mono text-amber">1,850 MT</strong></div>
+            <div><span class="text-muted">Target (70%):</span> <strong class="text-mono text-eco">1,295 MT</strong></div>
+            <div><span class="text-muted">Statutory Fee:</span> <strong class="text-mono">₹10,00,000</strong></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Avalon -->
+      <div class="card">
+        <div>
+          <div class="flex-between">
+            <div class="badge text-mono">Tier 3 (100-1K MT)</div>
+            <div class="badge" style="background: rgba(34, 197, 94, 0.1); border: none;"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg> Compliant</div>
+          </div>
+          <h3>Avalon Technologies Ltd.</h3>
+          <p style="font-size: 12px; color: var(--text-muted);">HQ: Chennai | Est. 1999</p>
+          
+          <div class="card-meta">
+            <div><span class="text-muted">CPCB Role:</span> <strong class="text-mono">Producer</strong></div>
+            <div><span class="text-muted">Waste Handled:</span> <strong class="text-mono text-amber">720 MT</strong></div>
+            <div><span class="text-muted">Target (70%):</span> <strong class="text-mono text-eco">504 MT</strong></div>
+            <div><span class="text-muted">Statutory Fee:</span> <strong class="text-mono">₹1,50,000</strong></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CALCULATOR ENGINE -->
+    <section class="calc-section">
+      <div>
+        <div class="badge" style="margin-bottom: 16px;">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
+          Statutory Simulator
+        </div>
+        <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 24px;">EPR Target Engine</h2>
+        
+        <div class="input-group">
+          <label>Financial Year (FY)</label>
+          <select id="targetYear" onchange="runCalculator()">
+            <option value="0.60">FY 23-24 / 24-25 (60%)</option>
+            <option value="0.70" selected>FY 25-26 / 26-27 (70%)</option>
+            <option value="0.80">FY 27-28 Onwards (80%)</option>
+          </select>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="input-group">
+            <label>Generated (MT)</label>
+            <input type="number" id="wasteGenerated" value="6850" oninput="runCalculator()">
+          </div>
+          <div class="input-group">
+            <label>Recycled via Portal (MT)</label>
+            <input type="number" id="wasteRecycled" value="4900" oninput="runCalculator()">
+          </div>
+        </div>
+        <p style="font-size: 11px; color: var(--text-muted); font-style: italic; margin-top: 12px;">*If MS Teams blocks scripts, defaults are shown for Dixon Technologies.</p>
+      </div>
+
+      <div class="result-card">
+        <div class="flex-between" style="margin-bottom: 16px; border-bottom: 1px solid var(--surface-alt); padding-bottom: 12px;">
+          <span class="text-mono text-muted" style="font-size: 12px; text-transform: uppercase;">Audit Output</span>
+          <span id="auditStatusBadge" class="badge">COMPLIANT</span>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+          <div style="background: var(--surface); padding: 16px; border-radius: 12px; border: 1px solid var(--surface-alt);">
+            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;" class="text-mono">Required Target</div>
+            <div id="outTarget" style="font-size: 24px; font-weight: 800; margin: 4px 0;">4,795 MT</div>
+            <div id="outTargetFormula" style="font-size: 10px; color: var(--eco);">6,850 MT &times; 70%</div>
+          </div>
+          <div style="background: var(--surface); padding: 16px; border-radius: 12px; border: 1px solid var(--surface-alt);">
+            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;" class="text-mono">Annexure-I Fee</div>
+            <div id="outFee" style="font-size: 24px; font-weight: 800; color: var(--amber); margin: 4px 0;">₹15,00,000</div>
+            <div id="outFeeTier" style="font-size: 10px; color: var(--text-muted);">> 5000 MT Slab</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex-between" style="font-size: 12px;">
+            <span class="text-muted">EPR Quota Fulfilled:</span>
+            <strong id="outPercentFulfilled" class="text-eco text-mono">102.19%</strong>
+          </div>
+          <div class="progress-bar">
+            <div id="outProgressBar" class="progress-fill" style="width: 100%;"></div>
+          </div>
+          <div class="flex-between text-mono text-muted" style="font-size: 11px;">
+            <span id="outDeficitSurplus" class="text-eco">Surplus Balance: +105.00 MT</span>
+            <span>Maintenance: ₹5,000</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- JS Engine (Placed at bottom; if blocked by MS Teams, visual layout remains unharmed) -->
+  <script>
+    function calculateRegistrationFee(targetMT) {
+      if (targetMT < 50) return { fee: 2500, label: "< 50 MT Slab" };
+      if (targetMT < 100) return { fee: 7500, label: "50 to < 100 MT Slab" };
+      if (targetMT < 1000) return { fee: 150000, label: "100 to < 1000 MT Slab" };
+      if (targetMT < 5000) return { fee: 1000000, label: "1000 to < 5000 MT Slab" };
+      return { fee: 1500000, label: "> 5000 MT Slab" };
+    }
+
+    function runCalculator() {
+      try {
+        const generated = parseFloat(document.getElementById('wasteGenerated').value) || 0;
+        const recycled = parseFloat(document.getElementById('wasteRecycled').value) || 0;
+        const rate = parseFloat(document.getElementById('targetYear').value) || 0.70;
+        
+        const targetMT = generated * rate;
+        const feeData = calculateRegistrationFee(targetMT);
+        
+        const isCompliant = recycled >= targetMT;
+        const percentage = targetMT > 0 ? ((recycled / targetMT) * 100).toFixed(2) : 0;
+        const difference = Math.abs(recycled - targetMT).toFixed(2);
+
+        document.getElementById('outTarget').innerText = `${targetMT.toLocaleString('en-IN', { maximumFractionDigits: 2 })} MT`;
+        document.getElementById('outTargetFormula').innerText = `${generated.toLocaleString('en-IN')} MT × ${(rate * 100)}%`;
+        document.getElementById('outFee').innerText = `₹${feeData.fee.toLocaleString('en-IN')}`;
+        document.getElementById('outFeeTier').innerText = feeData.label;
+        document.getElementById('outPercentFulfilled').innerText = `${percentage}%`;
+        
+        const pBar = document.getElementById('outProgressBar');
+        pBar.style.width = `${Math.min(Math.max(percentage, 0), 100)}%`;
+
+        const statusBadge = document.getElementById('auditStatusBadge');
+        const diffLabel = document.getElementById('outDeficitSurplus');
+
+        if (isCompliant) {
+          statusBadge.style.color = 'var(--eco)';
+          statusBadge.style.background = 'var(--eco-dim)';
+          statusBadge.style.borderColor = 'var(--eco-border)';
+          statusBadge.innerText = "COMPLIANT";
+          pBar.style.background = 'linear-gradient(90deg, var(--eco), var(--cyan))';
+          diffLabel.innerText = `Surplus Balance: +${difference} MT`;
+          diffLabel.className = "text-eco text-mono";
+        } else {
+          statusBadge.style.color = '#f43f5e';
+          statusBadge.style.background = 'rgba(244, 63, 94, 0.15)';
+          statusBadge.style.borderColor = 'rgba(244, 63, 94, 0.4)';
+          statusBadge.innerText = "NON-COMPLIANT";
+          pBar.style.background = 'linear-gradient(90deg, #f43f5e, var(--amber))';
+          diffLabel.innerText = `Deficit Penalty Risk: -${difference} MT`;
+          diffLabel.className = "text-mono";
+          diffLabel.style.color = '#f43f5e';
+        }
+      } catch (e) {
+        console.log("Calculator scripts blocked by MS Teams sandbox.");
+      }
+    }
+    
+    // Auto-run if scripts are allowed
+    runCalculator();
+  </script>
+</body>
+</html>
